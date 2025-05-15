@@ -34,19 +34,18 @@ class ResourceMonitorApp:
         self.toggle_btn = ttk.Button(self.root, text="Stop", command=self.toggle)
         self.toggle_btn.pack(pady=10)
 
-        # Liczba wykresów: CPU + RAM + dyski
         total_plots = 2 + len(self.disk_mounts)
         cols = math.ceil(math.sqrt(total_plots))
         rows = math.ceil(total_plots / cols)
 
         self.fig, self.ax = plt.subplots(rows, cols, figsize=(cols * 5, rows * 3))
         self.fig.tight_layout(pad=3.5)
-        self.ax = self.ax.flatten()  # spłaszczamy siatkę subplotów
+        self.ax = self.ax.flatten()
 
         plot_idx = 0
 
-        # CPU
         self.line_cpu, = self.ax[plot_idx].plot([], [], label="CPU (%)", color="blue")
+        self.fill_cpu = self.ax[plot_idx].fill_between([], [], [], color="blue", alpha=0.3)
         self.ax[plot_idx].set_ylim(0, 100)
         self.ax[plot_idx].set_title("Użycie CPU")
         self.ax[plot_idx].set_ylabel("CPU")
@@ -54,8 +53,8 @@ class ResourceMonitorApp:
         self.ax[plot_idx].grid(True)
         plot_idx += 1
 
-        # RAM
         self.line_mem, = self.ax[plot_idx].plot([], [], label="RAM (%)", color="green")
+        self.fill_mem = self.ax[plot_idx].fill_between([], [], [], color="green", alpha=0.3)
         self.ax[plot_idx].set_ylim(0, 100)
         self.ax[plot_idx].set_title("Użycie RAM")
         self.ax[plot_idx].set_ylabel("RAM")
@@ -63,19 +62,22 @@ class ResourceMonitorApp:
         self.ax[plot_idx].grid(True)
         plot_idx += 1
 
-        # Dyski
         self.disk_lines = {}
+        self.disk_fills = {}
+
         for mount in self.disk_mounts:
-            line, = self.ax[plot_idx].plot([], [], label=f"{mount} (%)", color="orange")
-            self.ax[plot_idx].set_ylim(0, 100)
-            self.ax[plot_idx].set_title(f"Dysk {mount}")
-            self.ax[plot_idx].set_ylabel("Dysk")
-            self.ax[plot_idx].legend()
-            self.ax[plot_idx].grid(True)
+            ax = self.ax[plot_idx]
+            line, = ax.plot([], [], label=f"{mount} (%)", color="orange")
+            fill = ax.fill_between([], [], [], color="orange", alpha=0.3)
+            ax.set_ylim(0, 100)
+            ax.set_title(f"Dysk {mount}")
+            ax.set_ylabel("Dysk")
+            ax.legend()
+            ax.grid(True)
             self.disk_lines[mount] = line
+            self.disk_fills[mount] = fill
             plot_idx += 1
 
-        # Ukryj niewykorzystane osie (jeśli są)
         for i in range(plot_idx, len(self.ax)):
             self.ax[i].axis("off")
 
@@ -112,9 +114,19 @@ class ResourceMonitorApp:
         self.frame_count += 1
 
         self.line_cpu.set_data(self.x_data, self.cpu_data)
+        self.fill_cpu.remove()
+        self.fill_cpu = self.line_cpu.axes.fill_between(self.x_data, self.cpu_data, color="blue", alpha=0.3)
+
         self.line_mem.set_data(self.x_data, self.mem_data)
+        self.fill_mem.remove()
+        self.fill_mem = self.line_mem.axes.fill_between(self.x_data, self.mem_data, color="green", alpha=0.3)
+
         for mount in self.disk_mounts:
-            self.disk_lines[mount].set_data(self.x_data, self.disk_data[mount])
+            line = self.disk_lines[mount]
+            data = self.disk_data[mount]
+            line.set_data(self.x_data, data)
+            self.disk_fills[mount].remove()
+            self.disk_fills[mount] = line.axes.fill_between(self.x_data, data, color="orange", alpha=0.3)
 
         for ax in self.ax:
             ax.set_xlim(max(0, self.frame_count - 60), self.frame_count + 1)
