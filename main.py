@@ -1,59 +1,86 @@
+import tkinter as tk
+from tkinter import ttk
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.animation as animation
-from matplotlib.widgets import Button
 from monitor.cpu_monitor import CPUMonitor
 from monitor.memory_monitor import MemoryMonitor
 from monitor.utils import safe_call
 
-cpu_monitor = CPUMonitor()
-mem_monitor = MemoryMonitor()
+class ResourceMonitorApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Monitor CPU i RAM")
+        self.root.geometry("900x700")
 
-x_data = []
-cpu_data = []
-mem_data = []
-is_running = [True]  # ułatwia zmianę stanu wewnątrz funkcji
+        self.cpu = CPUMonitor()
+        self.mem = MemoryMonitor()
+        self.running = True
+        self.frame_count = 0
 
-fig, ax = plt.subplots()
-plt.subplots_adjust(bottom=0.2)  # zostaw miejsce na przycisk
+        self.x_data = []
+        self.cpu_data = []
+        self.mem_data = []
 
-line1, = ax.plot([], [], label="CPU Usage (%)")
-line2, = ax.plot([], [], label="RAM Usage (%)")
-ax.set_ylim(0, 100)
-ax.set_xlim(0, 60)
-ax.set_xlabel("Czas (s)")
-ax.set_ylabel("Użycie (%)")
-ax.set_title("Monitorowanie CPU i RAM - na żywo")
-ax.legend()
-ax.grid(True)
+        self.build_gui()
 
-@safe_call
-def update(frame):
-    if not is_running[0]:
-        return line1, line2
+    def build_gui(self):
+        self.toggle_btn = ttk.Button(self.root, text="Stop", command=self.toggle)
+        self.toggle_btn.pack(pady=10)
 
-    x_data.append(frame)
-    cpu_data.append(cpu_monitor.get_usage())
-    mem_data.append(mem_monitor.get_usage())
+        # subploty: 2 wiersze, 1 kolumna
+        self.fig, self.ax = plt.subplots(2, 1, figsize=(9, 6), sharex=True)
+        self.fig.tight_layout(pad=3.0)
 
-    # Tylko ostatnie 60 sekund
-    if len(x_data) > 60:
-        x_data.pop(0)
-        cpu_data.pop(0)
-        mem_data.pop(0)
+        self.line_cpu, = self.ax[0].plot([], [], label="CPU (%)", color="blue")
+        self.ax[0].set_ylim(0, 100)
+        self.ax[0].set_ylabel("CPU (%)")
+        self.ax[0].set_title("Wykres użycia CPU")
+        self.ax[0].legend()
+        self.ax[0].grid(True)
 
-    line1.set_data(x_data, cpu_data)
-    line2.set_data(x_data, mem_data)
-    ax.set_xlim(max(0, frame - 60), frame + 1)
-    return line1, line2
+        self.line_mem, = self.ax[1].plot([], [], label="RAM (%)", color="green")
+        self.ax[1].set_ylim(0, 100)
+        self.ax[1].set_ylabel("RAM (%)")
+        self.ax[1].set_xlabel("Czas (s)")
+        self.ax[1].set_title("Wykres użycia RAM")
+        self.ax[1].legend()
+        self.ax[1].grid(True)
 
-# Przyciski
-ax_button = plt.axes([0.4, 0.05, 0.2, 0.075])
-button = Button(ax_button, 'Start/Stop')
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.root)
+        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-def toggle(event):
-    is_running[0] = not is_running[0]
+        self.ani = animation.FuncAnimation(self.fig, self.update_plot, interval=1000)
 
-button.on_clicked(toggle)
+    def toggle(self):
+        self.running = not self.running
+        self.toggle_btn.config(text="Start" if not self.running else "Stop")
 
-ani = animation.FuncAnimation(fig, update, interval=1000)
-plt.show()
+    @safe_call
+    def update_plot(self, frame):
+        if not self.running:
+            return self.line_cpu, self.line_mem
+
+        self.x_data.append(self.frame_count)
+        self.cpu_data.append(self.cpu.get_usage())
+        self.mem_data.append(self.mem.get_usage())
+
+        if len(self.x_data) > 60:
+            self.x_data.pop(0)
+            self.cpu_data.pop(0)
+            self.mem_data.pop(0)
+
+        self.frame_count += 1
+        self.line_cpu.set_data(self.x_data, self.cpu_data)
+        self.line_mem.set_data(self.x_data, self.mem_data)
+
+        self.ax[0].set_xlim(max(0, self.frame_count - 60), self.frame_count + 1)
+        self.ax[1].set_xlim(max(0, self.frame_count - 60), self.frame_count + 1)
+        self.canvas.draw()
+
+        return self.line_cpu, self.line_mem
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ResourceMonitorApp(root)
+    root.mainloop()
