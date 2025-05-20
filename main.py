@@ -4,14 +4,14 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.animation as animation
 import math
-from typing import List
+from typing import List, Dict
 from monitor.base_monitor import BaseMonitor
 from monitor.cpu_monitor import CPUMonitor
 from monitor.memory_monitor import MemoryMonitor
 from monitor.disk_monitor import DiskMonitor
-from monitor.gpu_monitor import GPUMonitor, GPUUsage
+from monitor.gpu_monitor import GPUMonitor
 from monitor.utils import safe_call
-from exporter.exporters import Exporter, CPUExporter, RAMExporter, DiskExporter, GPUExporter
+from exporter.exporters import Exporter, CPUExporter, RAMExporter, DiskExporter, GPUExporter, MultiMetricExporter
 
 class ResourceMonitorApp:
     def __init__(self, root):
@@ -31,7 +31,7 @@ class ResourceMonitorApp:
         self.frame_count = 0
 
         self.x_data = []
-        self.resource_data = {
+        self.resource_data: Dict[str, List[float]] = {
             "CPU": [],
             "RAM": [],
             **{mount: [] for mount in self.disk_mounts},
@@ -50,7 +50,8 @@ class ResourceMonitorApp:
         self.toggle_btn.pack(side=tk.LEFT, padx=5)
 
         self.export_var.set("CPU")
-        export_menu = ttk.OptionMenu(control_frame, self.export_var, "CPU", "CPU", "RAM", *self.disk_mounts, *[gpu.name for gpu in self.gpu_monitor.get_usage()])
+        export_options = ["CPU", "RAM"] + self.disk_mounts + [gpu.name for gpu in self.gpu_monitor.get_usage()] + ["WSZYSTKO"]
+        export_menu = ttk.OptionMenu(control_frame, self.export_var, export_options[0], *export_options)
         export_menu.pack(side=tk.LEFT, padx=5)
 
         export_btn = ttk.Button(control_frame, text="Eksportuj do CSV", command=self.export_selected_data)
@@ -103,7 +104,15 @@ class ResourceMonitorApp:
 
     def export_selected_data(self):
         key = self.export_var.get()
+
+        exporter: Exporter
+
         filename = f"{key.lower().replace(' ', '_')}_data.csv"
+
+        if key == "WSZYSTKO":
+            exporter = MultiMetricExporter()
+            exporter.export(filename, self.x_data, self.resource_data)
+            return
 
         if key == "CPU":
             exporter = CPUExporter()

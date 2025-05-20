@@ -1,5 +1,5 @@
 import csv
-from typing import List
+from typing import List, Dict
 
 class Exporter:
     def export(self, filename: str, x_data: List[int], y_data: List[float]):
@@ -45,3 +45,14 @@ class GPUExporter(Exporter):
             writer.writerow(["Czas (s)", f"GPU {self.name} (%)"])
             for x, y in zip(x_data, y_data):
                 writer.writerow([x, y])
+
+class MultiMetricExporter(Exporter):
+    def export(self, filename: str, x_data: List[int], metrics: Dict[str, List[float]]):
+        with open(filename, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            header = ["Czas (s)"] + list(metrics.keys())
+            writer.writerow(header)
+
+            for i in range(len(x_data)):
+                row = [x_data[i]] + [metrics[key][i] if i < len(metrics[key]) else '' for key in metrics]
+                writer.writerow(row)
