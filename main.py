@@ -11,6 +11,7 @@ from monitor.memory_monitor import MemoryMonitor
 from monitor.disk_monitor import DiskMonitor
 from monitor.gpu_monitor import GPUMonitor, GPUUsage
 from monitor.utils import safe_call
+from exporter.exporters import Exporter, CPUExporter, RAMExporter, DiskExporter, GPUExporter
 
 class ResourceMonitorApp:
     def __init__(self, root):
@@ -35,15 +36,26 @@ class ResourceMonitorApp:
             "RAM": [],
             **{mount: [] for mount in self.disk_mounts},
         }
-        self.gpu_labels = []  # dodane poniżej, bo GPUUsage zawiera nazwy
+        self.gpu_labels = []
+
+        self.export_var = tk.StringVar()
 
         self.build_gui()
 
     def build_gui(self):
-        self.toggle_btn = ttk.Button(self.root, text="Stop", command=self.toggle)
-        self.toggle_btn.pack(pady=10)
+        control_frame = ttk.Frame(self.root)
+        control_frame.pack(pady=10)
 
-        # Pobierz etykiety GPU
+        self.toggle_btn = ttk.Button(control_frame, text="Stop", command=self.toggle)
+        self.toggle_btn.pack(side=tk.LEFT, padx=5)
+
+        self.export_var.set("CPU")
+        export_menu = ttk.OptionMenu(control_frame, self.export_var, "CPU", "CPU", "RAM", *self.disk_mounts, *[gpu.name for gpu in self.gpu_monitor.get_usage()])
+        export_menu.pack(side=tk.LEFT, padx=5)
+
+        export_btn = ttk.Button(control_frame, text="Eksportuj do CSV", command=self.export_selected_data)
+        export_btn.pack(side=tk.LEFT, padx=5)
+
         for gpu in self.gpu_monitor.get_usage():
             self.gpu_labels.append(gpu.name)
             self.resource_data[gpu.name] = []
@@ -88,6 +100,23 @@ class ResourceMonitorApp:
     def toggle(self):
         self.running = not self.running
         self.toggle_btn.config(text="Start" if not self.running else "Stop")
+
+    def export_selected_data(self):
+        key = self.export_var.get()
+        filename = f"{key.lower().replace(' ', '_')}_data.csv"
+
+        if key == "CPU":
+            exporter = CPUExporter()
+        elif key == "RAM":
+            exporter = RAMExporter()
+        elif key in self.disk_mounts:
+            exporter = DiskExporter(key)
+        elif key in self.gpu_labels:
+            exporter = GPUExporter(key)
+        else:
+            return
+
+        exporter.export(filename, self.x_data, self.resource_data.get(key, []))
 
     @safe_call
     def update_plot(self, frame):
