@@ -1,4 +1,3 @@
-# main.py (GUI) – wszystkie monitory jako instancje klasy bazowej
 import tkinter as tk
 from tkinter import ttk
 import matplotlib.pyplot as plt
@@ -10,19 +9,23 @@ from monitor.base_monitor import BaseMonitor
 from monitor.cpu_monitor import CPUMonitor
 from monitor.memory_monitor import MemoryMonitor
 from monitor.disk_monitor import DiskMonitor
+from monitor.gpu_monitor import GPUMonitor, GPUUsage
 from monitor.utils import safe_call
 
 class ResourceMonitorApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Monitor CPU, RAM i Dysków")
+        self.root.title("Monitor CPU, RAM, GPU i Dysków")
         self.root.geometry("1000x900")
 
-        # lista wszystkich monitorów jako BaseMonitor
-        self.monitors: List[BaseMonitor] = [CPUMonitor(), MemoryMonitor(), DiskMonitor()]
+        self.cpu = CPUMonitor()
+        self.mem = MemoryMonitor()
+        self.disk_monitor = DiskMonitor()
+        self.gpu_monitor = GPUMonitor()
 
-        # dane dla GUI
-        self.disk_mounts = DiskMonitor.get_mounts()
+        self.monitors: List[BaseMonitor] = [self.cpu, self.mem, self.disk_monitor]
+
+        self.disk_mounts = self.disk_monitor.get_mounts()
         self.running = True
         self.frame_count = 0
 
@@ -30,14 +33,20 @@ class ResourceMonitorApp:
         self.resource_data = {
             "CPU": [],
             "RAM": [],
-            **{mount: [] for mount in self.disk_mounts}
+            **{mount: [] for mount in self.disk_mounts},
         }
+        self.gpu_labels = []  # dodane poniżej, bo GPUUsage zawiera nazwy
 
         self.build_gui()
 
     def build_gui(self):
         self.toggle_btn = ttk.Button(self.root, text="Stop", command=self.toggle)
         self.toggle_btn.pack(pady=10)
+
+        # Pobierz etykiety GPU
+        for gpu in self.gpu_monitor.get_usage():
+            self.gpu_labels.append(gpu.name)
+            self.resource_data[gpu.name] = []
 
         total_plots = len(self.resource_data)
         cols = math.ceil(math.sqrt(total_plots))
@@ -52,7 +61,10 @@ class ResourceMonitorApp:
 
         for idx, key in enumerate(self.resource_data):
             ax = self.ax[idx]
-            color = "blue" if key == "CPU" else "green" if key == "RAM" else "orange"
+            color = {
+                "CPU": "blue",
+                "RAM": "green"
+            }.get(key, "orange") if "GPU" not in key else "purple"
             line, = ax.plot([], [], label=f"{key} (%)", color=color)
             self.lines[key] = line
             self.fills[key] = None
@@ -83,16 +95,16 @@ class ResourceMonitorApp:
             return
 
         self.x_data.append(self.frame_count)
+        self.resource_data["CPU"].append(self.cpu.get_usage().percent)
+        self.resource_data["RAM"].append(self.mem.get_usage().percent)
 
-        for monitor in self.monitors:
-            usage = monitor.get_usage()
-            if isinstance(usage, list):  # DiskMonitor
-                for disk in usage:
-                    if disk.mount in self.resource_data:
-                        self.resource_data[disk.mount].append(disk.percent)
-            else:
-                name = "CPU" if hasattr(usage, 'used') is False else "RAM"
-                self.resource_data[name].append(usage.percent)
+        for usage in self.disk_monitor.get_usage():
+            if usage.mount in self.resource_data:
+                self.resource_data[usage.mount].append(usage.percent)
+
+        for gpu in self.gpu_monitor.get_usage():
+            if gpu.name in self.resource_data:
+                self.resource_data[gpu.name].append(gpu.percent)
 
         if len(self.x_data) > 60:
             self.x_data.pop(0)
