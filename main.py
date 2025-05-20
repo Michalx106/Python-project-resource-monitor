@@ -10,7 +10,6 @@ from monitor.base_monitor import BaseMonitor
 from monitor.cpu_monitor import CPUMonitor
 from monitor.memory_monitor import MemoryMonitor
 from monitor.disk_monitor import DiskMonitor
-from monitor.base_usage import BaseUsage, DiskUsage
 from monitor.utils import safe_call
 
 class ResourceMonitorApp:

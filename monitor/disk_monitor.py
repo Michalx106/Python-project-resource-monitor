@@ -1,7 +1,13 @@
 import psutil
-from .base_usage import DiskUsage
-from .base_monitor import BaseMonitor
+from .base_monitor import BaseMonitor, BaseUsage
 from typing import List
+
+class DiskUsage(BaseUsage):
+    def __init__(self, percent: float, used: float, total: float, mount: str):
+        self.percent = percent
+        self.used = used
+        self.total = total
+        self.mount = mount
 
 class DiskMonitor(BaseMonitor):
     def get_usage(self) -> List[DiskUsage]:

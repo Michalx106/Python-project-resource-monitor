@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
-from .base_usage import BaseUsage
 
+class BaseUsage(ABC):
+    """Abstrakcyjna klasa danych o użyciu zasobu."""
+    percent: float
 
 class BaseMonitor(ABC):
     """Abstrakcyjna klasa bazowa dla wszystkich monitorów."""
