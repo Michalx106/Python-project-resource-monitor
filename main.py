@@ -43,7 +43,9 @@ class ResourceMonitorApp:
             for d in self.disk.get_usage()
         }
         self.gpu_data: Dict[str, List[float]] = {}
-        self.network_data: Dict[str, List[float]] = {"NET_UP": [], "NET_DOWN": []}
+        self.network_data: Dict[str, List[float]] = {
+            "NET_UP": [], "NET_DOWN": []
+        }
 
         self.disk_mounts = list(self.disk_data.keys())
         self.fig = None
@@ -82,7 +84,12 @@ class ResourceMonitorApp:
         export_btn.pack(side=tk.LEFT, padx=5)
 
         # Układ wykresów
-        metrics_count = 2 + len(self.disk_mounts) + len(self.gpu.get_usage()) + 2
+        metrics_count = (
+            2
+            + len(self.disk_mounts)
+            + len(self.gpu.get_usage())
+            + 2
+        )
         cols = math.ceil(math.sqrt(metrics_count))
         rows = math.ceil(metrics_count / cols)
         self.fig, axs = plt.subplots(rows, cols, figsize=(cols * 5, rows * 3))
@@ -240,8 +247,3 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = ResourceMonitorApp(root)
     root.mainloop()
-
-# To do:
-# - Add error handling for file operations
-# - Add cpu cores usage
-# - Add
