@@ -1,6 +1,7 @@
 import functools
 from typing import Callable
 
+
 def safe_call(func: Callable) -> Callable:
     """Dekorator obsługujący wyjątki przy wywołaniach monitorów."""
     @functools.wraps(func)

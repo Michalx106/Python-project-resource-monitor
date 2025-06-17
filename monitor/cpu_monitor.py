@@ -1,9 +1,11 @@
 import psutil
 from .base_monitor import BaseMonitor, BaseUsage
 
+
 class CPUUsage(BaseUsage):
     def __init__(self, percent: float):
         self.percent = percent
+
 
 class CPUMonitor(BaseMonitor):
     """Monitor CPU."""

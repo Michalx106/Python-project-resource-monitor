@@ -2,12 +2,14 @@ import psutil
 from .base_monitor import BaseMonitor, BaseUsage
 from typing import List
 
+
 class DiskUsage(BaseUsage):
     def __init__(self, percent: float, used: float, total: float, mount: str):
         self.percent = percent
         self.used = used
         self.total = total
         self.mount = mount
+
 
 class DiskMonitor(BaseMonitor):
     def get_usage(self) -> List[DiskUsage]:
@@ -27,4 +29,8 @@ class DiskMonitor(BaseMonitor):
 
     @staticmethod
     def get_mounts() -> list[str]:
-        return [p.mountpoint for p in psutil.disk_partitions(all=False) if 'cdrom' not in p.opts.lower()]
+        return [
+            p.mountpoint
+            for p in psutil.disk_partitions(all=False)
+            if 'cdrom' not in p.opts.lower()
+        ]

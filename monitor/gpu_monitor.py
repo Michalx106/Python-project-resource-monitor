@@ -34,7 +34,9 @@ class GPUMonitor(BaseMonitor):
         elif GPU_BACKEND == "wmi":
             w = wmi.WMI(namespace="root\\cimv2")
             usages = []
-            for gpu in w.Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine():
+            for gpu in (
+                w.Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine()
+            ):
                 name = getattr(gpu, "Name", "GPU")
                 try:
                     load = float(getattr(gpu, "UtilizationPercentage", 0.0))
