@@ -4,7 +4,19 @@ from typing import List
 
 
 class DiskUsage(BaseUsage):
+    """
+    Przechowuje informacje o użyciu danego dysku.
+
+    Args:
+        percent: Wykorzystanie w procentach.
+        used: Ilość użytego miejsca (bajty).
+        total: Całkowita pojemność (bajty).
+        mount: Punkt montowania dysku.
+    """
     def __init__(self, percent: float, used: float, total: float, mount: str):
+        """
+        Inicjalizuje obiekt DiskUsage.
+        """
         self.percent = percent
         self.used = used
         self.total = total
@@ -12,7 +24,13 @@ class DiskUsage(BaseUsage):
 
 
 class DiskMonitor(BaseMonitor):
+    """
+    Monitor dysku.
+    """
     def get_usage(self) -> List[DiskUsage]:
+        """
+        Zwraca listę obiektów DiskUsage dla wszystkich zamontowanych dysków.
+        """
         usages = []
         for part in psutil.disk_partitions():
             try:
@@ -29,6 +47,10 @@ class DiskMonitor(BaseMonitor):
 
     @staticmethod
     def get_mounts() -> list[str]:
+        """
+        Zwraca listę punktów montowania wszystkich dysków,
+        z wyjątkiem napędów CD-ROM.
+        """
         return [
             p.mountpoint
             for p in psutil.disk_partitions(all=False)

@@ -21,7 +21,19 @@ from exporter.exporters import (
 
 
 class ResourceMonitorApp:
+    """
+    Główna klasa aplikacji monitorującej zasoby systemowe z interfejsem GUI.
+
+    Inicjalizuje i obsługuje monitory CPU, RAM, dysków, GPU oraz sieci.
+    Wyświetla dane w postaci wykresów oraz umożliwia eksport wybranych
+    metryk do pliku CSV.
+    """
     def __init__(self, root):
+        """
+        Inicjalizuje aplikację, monitory oraz bufory danych, buduje GUI.
+        Args:
+            root: Obiekt głównego okna tkinter.
+        """
         self.root = root
         self.root.title("Monitor zasobów systemowych")
         self.root.geometry("1200x800")
@@ -56,6 +68,10 @@ class ResourceMonitorApp:
         self.build_gui()
 
     def build_gui(self):
+        """
+        Buduje i rozmieszcza elementy graficzne interfejsu użytkownika.
+        Inicjalizuje wykresy i kontrolki wyboru oraz eksportu metryk.
+        """
         # Lista rozwijana + przycisk eksportu
         frame = ttk.Frame(self.root)
         frame.pack(pady=10)
@@ -138,6 +154,18 @@ class ResourceMonitorApp:
         )
 
     def init_plot(self, label, color, data_buffer, idx):
+        """
+        Tworzy nowy wykres dla danej metryki.
+
+        Args:
+            label: Nazwa metryki.
+            color: Kolor wykresu.
+            data_buffer: Bufor z danymi.
+            idx: Indeks wykresu na siatce matplotlib.
+
+        Returns:
+            Nowy indeks wykresu.
+        """
         line, = self.ax[idx].plot([], [], label=label, color=color)
         fill = self.ax[idx].fill_between([], [], [], color=color, alpha=0.3)
         self.ax[idx].set_ylim(0, 100)
@@ -151,6 +179,12 @@ class ResourceMonitorApp:
 
     @safe_call
     def update_plot(self, frame):
+        """
+        Aktualizuje dane oraz rysuje wykresy w regularnych odstępach czasu.
+        Funkcja jest wywoływana co sekundę przez animację matplotlib.
+        Args:
+            frame: Numer aktualnej klatki animacji (ignorowany).
+        """
         self.x_data.append(self.frame_count)
         self.cpu_data.append(self.cpu.get_usage().percent)
         self.ram_data.append(self.ram.get_usage().percent)
@@ -192,6 +226,13 @@ class ResourceMonitorApp:
         self.canvas.draw()
 
     def refresh_plot(self, label, data):
+        """
+        Aktualizuje pojedynczy wykres na podstawie nowo zebranych danych.
+
+        Args:
+            label: Nazwa metryki.
+            data: Bufor z danymi dla metryki.
+        """
         if len(data) != len(self.x_data):
             return
         line = self.lines[label]
@@ -206,6 +247,10 @@ class ResourceMonitorApp:
         )
 
     def export_selected(self):
+        """
+        Eksportuje wybraną przez użytkownika metrykę do pliku CSV.
+        Obsługuje eksport pojedynczych oraz wszystkich metryk naraz.
+        """
         key = self.selected_metric.get()
         exporter: Exporter
 

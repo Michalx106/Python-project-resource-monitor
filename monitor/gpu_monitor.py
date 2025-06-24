@@ -12,16 +12,38 @@ except ImportError:
 
 
 class GPUUsage(BaseUsage):
+    """
+    Przechowuje informacje o użyciu GPU.
+    Args:
+        name: Nazwa GPU.
+        percent: Wykorzystanie w procentach.
+    """
     def __init__(self, name: str, percent: float):
+        """
+        Inicjalizuje obiekt GPUUsage.
+        """
         self.name = name
         self.percent = percent
 
 
 class GPUMonitor(BaseMonitor):
+    """
+    Monitor GPU.
+    Sprawdza dostępność GPU i zwraca informacje o jego użyciu.
+    Jeśli nie można znaleźć GPU, zwraca pustą listę.
+    """
     def __init__(self):
+        """
+        Inicjalizuje monitor GPU.
+        Sprawdza, czy dostępne są biblioteki do monitorowania GPU.
+        """
         self.available = GPU_BACKEND is not None
 
     def get_usage(self) -> list[GPUUsage]:
+        """
+        Zwraca listę obiektów GPUUsage dla wszystkich dostępnych GPU.
+        Jeśli GPU nie jest dostępne, zwraca pustą listę.
+        """
         if not self.available:
             return []
 
