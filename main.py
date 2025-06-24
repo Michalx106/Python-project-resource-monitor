@@ -170,7 +170,7 @@ class ResourceMonitorApp:
         fill = self.ax[idx].fill_between([], [], [], color=color, alpha=0.3)
         self.ax[idx].set_ylim(0, 100)
         self.ax[idx].set_title(label)
-        self.ax[idx].set_ylabel(label)
+        self.ax[idx].set_ylabel("%")
         self.ax[idx].legend()
         self.ax[idx].grid(True)
         self.lines[label] = line
