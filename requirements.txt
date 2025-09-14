@@ -1,4 +1,5 @@
 matplotlib
 psutil
 GPUtil
-wmi
+wmi; platform_system == "Windows"
+pytest
