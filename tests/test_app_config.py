@@ -54,7 +54,12 @@ def patch_monitors(monkeypatch):
     monkeypatch.setattr(main.tk, "StringVar", DummyVar)
 
 
-def test_custom_config(monkeypatch, tmp_path):
+def test_load_config_defaults(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "CONFIG_FILE", tmp_path / "config.json")
+    assert config.load_config() == config.DEFAULT_CONFIG
+
+
+def test_default_config_when_missing(monkeypatch, tmp_path):
     patch_monitors(monkeypatch)
     monkeypatch.setattr(main.ResourceMonitorApp, "build_gui", dummy_build_gui)
     monkeypatch.setattr(config, "CONFIG_FILE", tmp_path / "config.json")
@@ -64,16 +69,17 @@ def test_custom_config(monkeypatch, tmp_path):
 
     monkeypatch.setattr(main.animation, "FuncAnimation", fake_anim)
     app = main.ResourceMonitorApp(make_root(), update_interval_ms=500, history_length=30)
-    assert app.update_interval_ms == 500
-    assert app.history_length == 30
-    assert app.ani.event_source.interval == 500
+    assert app.update_interval_ms == config.DEFAULT_CONFIG["update_interval_ms"]
+    assert app.history_length == config.DEFAULT_CONFIG["history_length"]
+    assert app.ani.event_source.interval == config.DEFAULT_CONFIG["update_interval_ms"]
 
-    app.x_data = list(range(30))
-    app.cpu_data = list(range(30))
-    app.ram_data = list(range(30))
-    app.network_data = {"NET_UP": list(range(30)), "NET_DOWN": list(range(30))}
+    hl = config.DEFAULT_CONFIG["history_length"]
+    app.x_data = list(range(hl))
+    app.cpu_data = list(range(hl))
+    app.ram_data = list(range(hl))
+    app.network_data = {"NET_UP": list(range(hl)), "NET_DOWN": list(range(hl))}
     app.update_plot(None)
-    assert len(app.x_data) == 30
+    assert len(app.x_data) == hl
 
 
 def test_save_and_load_config(monkeypatch, tmp_path):
@@ -104,6 +110,10 @@ def test_save_and_load_config(monkeypatch, tmp_path):
 
     root1 = make_root()
     app1 = main.ResourceMonitorApp(root1)
+    assert app1.update_interval_ms == config.DEFAULT_CONFIG["update_interval_ms"]
+    assert app1.history_length == config.DEFAULT_CONFIG["history_length"]
+    assert app1.cpu_threshold_var.get() == str(config.DEFAULT_CONFIG["cpu_threshold"])
+    assert app1.ram_threshold_var.get() == str(config.DEFAULT_CONFIG["ram_threshold"])
     app1.update_interval_ms = 1500
     app1.history_length = 20
     app1.cpu_threshold_var.set("75")
