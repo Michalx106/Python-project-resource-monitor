@@ -42,7 +42,7 @@ def load_config() -> Dict[str, Any]:
         except json.JSONDecodeError:
             data = {}
         return {**DEFAULT_CONFIG, **data}
-    return {}
+    return DEFAULT_CONFIG.copy()
 
 
 def save_config(config: Dict[str, Any]) -> None:
