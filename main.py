@@ -1,7 +1,7 @@
 import math
 from typing import Dict, List
 import tkinter as tk
-from tkinter import ttk
+from tkinter import messagebox, ttk
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.animation as animation
@@ -11,6 +11,7 @@ from monitor.memory_monitor import MemoryMonitor
 from monitor.disk_monitor import DiskMonitor
 from monitor.gpu_monitor import GPUMonitor
 from monitor.network_monitor import NetworkMonitor
+from monitor.process_monitor import ProcessMonitor
 from monitor.utils import safe_call
 
 from exporter.exporters import (
@@ -55,6 +56,7 @@ class ResourceMonitorApp:
         self.gpu = GPUMonitor()
         self.disk = DiskMonitor()
         self.network = NetworkMonitor()
+        self.process_monitor = ProcessMonitor()
 
         # Bufory danych
         self.frame_count = 0
@@ -69,6 +71,7 @@ class ResourceMonitorApp:
         self.network_data: Dict[str, List[float]] = {
             "NET_UP": [], "NET_DOWN": []
         }
+        self.process_tree = None
 
         self.disk_mounts = list(self.disk_data.keys())
         self.fig = None
@@ -123,6 +126,34 @@ class ResourceMonitorApp:
 
         apply_btn = ttk.Button(settings, text="Zastosuj", command=self.apply_settings)
         apply_btn.pack(side=tk.LEFT, padx=5)
+
+        process_frame = ttk.Frame(self.root)
+        process_frame.pack(pady=5, fill=tk.BOTH)
+
+        self.process_tree = ttk.Treeview(
+            process_frame,
+            columns=("pid", "cpu", "ram"),
+            show="headings",
+            height=5,
+        )
+        self.process_tree.heading("pid", text="PID")
+        self.process_tree.heading("cpu", text="CPU %")
+        self.process_tree.heading("ram", text="RAM %")
+        self.process_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        thresholds = ttk.Frame(process_frame)
+        thresholds.pack(side=tk.RIGHT, padx=5)
+
+        ttk.Label(thresholds, text="CPU próg (%)").pack(side=tk.LEFT)
+        self.cpu_threshold_var = tk.StringVar(value="90")
+        ttk.Entry(thresholds, textvariable=self.cpu_threshold_var, width=5).pack(
+            side=tk.LEFT, padx=2
+        )
+        ttk.Label(thresholds, text="RAM próg (%)").pack(side=tk.LEFT)
+        self.ram_threshold_var = tk.StringVar(value="90")
+        ttk.Entry(thresholds, textvariable=self.ram_threshold_var, width=5).pack(
+            side=tk.LEFT, padx=2
+        )
 
         # Układ wykresów
         metrics_count = (
@@ -259,6 +290,35 @@ class ResourceMonitorApp:
             self.refresh_plot(f"GPU_{k}", self.gpu_data[k])
         for k in self.network_data:
             self.refresh_plot(k, self.network_data[k])
+
+        processes = self.process_monitor.get_top_processes()
+        if self.process_tree:
+            self.process_tree.delete(*self.process_tree.get_children())
+            for p in processes:
+                self.process_tree.insert(
+                    "", tk.END, values=(p.pid, f"{p.cpu_percent:.1f}", f"{p.memory_percent:.1f}")
+                )
+
+        try:
+            cpu_thr = float(self.cpu_threshold_var.get())
+        except (ValueError, AttributeError):
+            cpu_thr = None
+        try:
+            ram_thr = float(self.ram_threshold_var.get())
+        except (ValueError, AttributeError):
+            ram_thr = None
+
+        if (cpu_thr is not None) or (ram_thr is not None):
+            for p in processes:
+                if (
+                    (cpu_thr is not None and p.cpu_percent > cpu_thr)
+                    or (ram_thr is not None and p.memory_percent > ram_thr)
+                ):
+                    messagebox.showwarning(
+                        "Próg przekroczony",
+                        f"Proces {p.name} (PID {p.pid}) przekracza próg",
+                    )
+                    break
 
         for ax in self.ax:
             ax.set_xlim(
