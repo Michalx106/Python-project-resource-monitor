@@ -384,7 +384,7 @@ class ResourceMonitorApp:
                 "ram_threshold": ram_thr,
             }
         )
-        safe_call(self.root.destroy)
+        safe_call()(self.root.destroy)()
 
     def export_selected(self):
         """
