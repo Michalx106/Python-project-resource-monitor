@@ -16,6 +16,7 @@ class BaseMonitor(ABC):
     @abstractmethod
     def get_usage(self) -> BaseUsage:
         """
-        Zwraca dane o użyciu danego zasobu jako obiekt.
+        Zwraca dane o użyciu danego zasobu jako obiekt lub listę obiektów
+        ``BaseUsage``.
         """
         pass

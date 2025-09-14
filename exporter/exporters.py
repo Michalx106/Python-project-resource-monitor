@@ -101,7 +101,7 @@ class GPUExporter(Exporter):
 
 class NetworkExporter(Exporter):
     """
-    Eksporter danych o przesyłanych danych sieciowych do pliku CSV.
+    Eksporter przesyłanych danych sieciowych do pliku CSV.
 
     Args:
         label: Nazwa metryki (NET_UP/NET_DOWN).
