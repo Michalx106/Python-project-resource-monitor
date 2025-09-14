@@ -176,7 +176,7 @@ class ResourceMonitorApp:
         self.fills[label] = fill
         return idx + 1
 
-    @safe_call
+    @safe_call()
     def update_plot(self, frame):
         """
         Aktualizuje dane oraz rysuje wykresy w regularnych odstępach czasu.

@@ -1,29 +1,40 @@
 import functools
-from typing import Callable
+import logging
+from typing import Any, Callable
 
 
-def safe_call(func: Callable) -> Callable:
+def safe_call(default: Any = None) -> Callable:
     """
     Dekorator obsługujący wyjątki przy wywołaniach monitorów.
-    Jeśli wystąpi błąd, zwraca -1.0 zamiast przerywać działanie programu.
+    Jeśli wystąpi błąd, zwraca ``default`` zamiast przerywać działanie programu.
+
     Args:
-        func: Funkcja do dekorowania.
+        default: Wartość zwracana w razie wystąpienia wyjątku.
+
     Returns:
-        Funkcja dekorowana, która obsługuje wyjątki.
+        Dekorator opakowujący funkcję tak, by zwracała wartość domyślną
+        w przypadku błędu.
     """
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        """
-        Funkcja opakowująca, która obsługuje wyjątki.
-        Args:
-            *args: Argumenty pozycyjne przekazywane do funkcji.
-            **kwargs: Argumenty nazwane przekazywane do funkcji.
-        Returns:
-            Wynik funkcji lub -1.0 w przypadku błędu.
-        """
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            print(f"Błąd podczas wykonywania {func.__name__}: {e}")
-            return -1.0
-    return wrapper
+
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            """
+            Funkcja opakowująca, która obsługuje wyjątki.
+
+            Args:
+                *args: Argumenty pozycyjne przekazywane do funkcji.
+                **kwargs: Argumenty nazwane przekazywane do funkcji.
+
+            Returns:
+                Wynik funkcji lub ``default`` w przypadku błędu.
+            """
+            try:
+                return func(*args, **kwargs)
+            except Exception:
+                logging.exception("Błąd podczas wykonywania %s", func.__name__)
+                return default
+
+        return wrapper
+
+    return decorator
