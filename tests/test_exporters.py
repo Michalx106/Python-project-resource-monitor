@@ -1,4 +1,6 @@
 import csv
+import json
+import pytest
 
 
 def test_cpu_exporter_writes_csv(tmp_path):
@@ -28,4 +30,31 @@ def test_multi_metric_exporter_handles_ragged_data(tmp_path):
     assert rows[0] == ["Czas (s)", "CPU", "RAM"]
     # Third row has missing RAM value -> empty string
     assert rows[2] == ["1", "2.0", ""]
+
+
+def test_json_exporter_writes_json(tmp_path):
+    from exporter.exporters import JSONExporter
+    x = [0, 1, 2]
+    metrics = {"CPU": [10.0, 20.0, 30.0]}
+    out = tmp_path / "data.json"
+    JSONExporter().export(str(out), x, metrics)
+
+    with out.open() as f:
+        data = json.load(f)
+    assert data["x_data"] == x
+    assert data["metrics"] == metrics
+
+
+def test_ram_exporter_raises_runtime_error(tmp_path):
+    from exporter.exporters import RAMExporter
+    invalid = tmp_path / "missing" / "ram.csv"
+    with pytest.raises(RuntimeError):
+        RAMExporter().export(str(invalid), [0], [0.0])
+
+
+def test_json_exporter_raises_runtime_error(tmp_path):
+    from exporter.exporters import JSONExporter
+    invalid = tmp_path / "missing" / "data.json"
+    with pytest.raises(RuntimeError):
+        JSONExporter().export(str(invalid), [0], {"CPU": [0.0]})
 
