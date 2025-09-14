@@ -1,15 +1,16 @@
+from dataclasses import dataclass
+
 import psutil
+
 from .base_monitor import BaseMonitor, BaseUsage
 
 
+@dataclass
 class MemoryUsage(BaseUsage):
-    """
-    Przechowuje informacje o aktualnym wykorzystaniu pamięci RAM.
-    """
-    def __init__(self, percent: float, used: float, total: float):
-        self.percent = percent
-        self.used = used
-        self.total = total
+    """Przechowuje informacje o aktualnym wykorzystaniu pamięci RAM."""
+
+    used: float
+    total: float
 
 
 class MemoryMonitor(BaseMonitor):

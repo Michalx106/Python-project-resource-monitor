@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from .base_monitor import BaseMonitor, BaseUsage
 
 try:
@@ -11,19 +13,11 @@ except ImportError:
         GPU_BACKEND = None
 
 
+@dataclass
 class GPUUsage(BaseUsage):
-    """
-    Przechowuje informacje o użyciu GPU.
-    Args:
-        name: Nazwa GPU.
-        percent: Wykorzystanie w procentach.
-    """
-    def __init__(self, name: str, percent: float):
-        """
-        Inicjalizuje obiekt GPUUsage.
-        """
-        self.name = name
-        self.percent = percent
+    """Przechowuje informacje o użyciu GPU."""
+
+    name: str
 
 
 class GPUMonitor(BaseMonitor):

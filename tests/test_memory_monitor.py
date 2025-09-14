@@ -10,7 +10,5 @@ def test_memory_monitor_uses_virtual_memory(monkeypatch):
 
     m = mm.MemoryMonitor()
     usage = m.get_usage()
-    assert usage.percent == 73.5
-    assert usage.used == 1024
-    assert usage.total == 2048
+    assert usage == mm.MemoryUsage(percent=73.5, used=1024, total=2048)
 

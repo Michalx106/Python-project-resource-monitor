@@ -1,26 +1,18 @@
-import psutil
-from .base_monitor import BaseMonitor, BaseUsage
+from dataclasses import dataclass
 from typing import List
 
+import psutil
 
+from .base_monitor import BaseMonitor, BaseUsage
+
+
+@dataclass
 class DiskUsage(BaseUsage):
-    """
-    Przechowuje informacje o użyciu danego dysku.
+    """Przechowuje informacje o użyciu danego dysku."""
 
-    Args:
-        percent: Wykorzystanie w procentach.
-        used: Ilość użytego miejsca (bajty).
-        total: Całkowita pojemność (bajty).
-        mount: Punkt montowania dysku.
-    """
-    def __init__(self, percent: float, used: float, total: float, mount: str):
-        """
-        Inicjalizuje obiekt DiskUsage.
-        """
-        self.percent = percent
-        self.used = used
-        self.total = total
-        self.mount = mount
+    used: float
+    total: float
+    mount: str
 
 
 class DiskMonitor(BaseMonitor):
