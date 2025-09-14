@@ -20,6 +20,8 @@ from exporter.exporters import (
     NetworkExporter, MultiMetricExporter, JSONExporter
 )
 
+from config import load_config, save_config
+
 
 class ResourceMonitorApp:
     """
@@ -46,9 +48,17 @@ class ResourceMonitorApp:
         self.root = root
         self.root.title("Monitor zasobów systemowych")
         self.root.geometry("1200x800")
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
-        self.update_interval_ms = update_interval_ms
-        self.history_length = history_length
+        config = load_config()
+        self.update_interval_ms = config.get("update_interval_ms", update_interval_ms)
+        self.history_length = config.get("history_length", history_length)
+        self.cpu_threshold_var = tk.StringVar(
+            master=self.root, value=str(config.get("cpu_threshold", 90))
+        )
+        self.ram_threshold_var = tk.StringVar(
+            master=self.root, value=str(config.get("ram_threshold", 90))
+        )
 
         # Inicjalizacja monitorów
         self.cpu = CPUMonitor()
@@ -154,12 +164,10 @@ class ResourceMonitorApp:
         thresholds.pack(side=tk.RIGHT, padx=5)
 
         ttk.Label(thresholds, text="CPU próg (%)").pack(side=tk.LEFT)
-        self.cpu_threshold_var = tk.StringVar(value="90")
         ttk.Entry(thresholds, textvariable=self.cpu_threshold_var, width=5).pack(
             side=tk.LEFT, padx=2
         )
         ttk.Label(thresholds, text="RAM próg (%)").pack(side=tk.LEFT)
-        self.ram_threshold_var = tk.StringVar(value="90")
         ttk.Entry(thresholds, textvariable=self.ram_threshold_var, width=5).pack(
             side=tk.LEFT, padx=2
         )
@@ -357,6 +365,26 @@ class ResourceMonitorApp:
             alpha=0.3,
             color=line.get_color()
         )
+
+    def on_close(self) -> None:
+        """Handle application shutdown and persist settings."""
+        try:
+            cpu_thr = int(self.cpu_threshold_var.get())
+        except (ValueError, tk.TclError):
+            cpu_thr = 90
+        try:
+            ram_thr = int(self.ram_threshold_var.get())
+        except (ValueError, tk.TclError):
+            ram_thr = 90
+        save_config(
+            {
+                "update_interval_ms": self.update_interval_ms,
+                "history_length": self.history_length,
+                "cpu_threshold": cpu_thr,
+                "ram_threshold": ram_thr,
+            }
+        )
+        safe_call(self.root.destroy)
 
     def export_selected(self):
         """
