@@ -45,6 +45,19 @@ def test_json_exporter_writes_json(tmp_path):
     assert data["metrics"] == metrics
 
 
+def test_json_exporter_writes_multiple_metrics(tmp_path):
+    from exporter.exporters import JSONExporter
+    x = [0, 1]
+    metrics = {"CPU": [1.0, 2.0], "RAM": [50.0, 60.0]}
+    out = tmp_path / "multi.json"
+    JSONExporter().export(str(out), x, metrics)
+
+    with out.open() as f:
+        data = json.load(f)
+    assert data["x_data"] == x
+    assert data["metrics"] == metrics
+
+
 def test_ram_exporter_raises_runtime_error(tmp_path):
     from exporter.exporters import RAMExporter
     invalid = tmp_path / "missing" / "ram.csv"
