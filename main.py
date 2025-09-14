@@ -1,7 +1,7 @@
 import math
 from typing import Dict, List
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.animation as animation
@@ -12,6 +12,7 @@ from monitor.disk_monitor import DiskMonitor
 from monitor.gpu_monitor import GPUMonitor
 from monitor.network_monitor import NetworkMonitor
 from monitor.utils import safe_call
+from monitor.process_monitor import ProcessMonitor
 
 from exporter.exporters import (
     Exporter,
@@ -44,6 +45,10 @@ class ResourceMonitorApp:
         self.gpu = GPUMonitor()
         self.disk = DiskMonitor()
         self.network = NetworkMonitor()
+        self.process_monitor = ProcessMonitor()
+
+        self.cpu_threshold = tk.DoubleVar(value=90.0)
+        self.ram_threshold = tk.DoubleVar(value=90.0)
 
         # Bufory danych
         self.frame_count = 0
@@ -98,6 +103,23 @@ class ResourceMonitorApp:
             command=self.export_selected
         )
         export_btn.pack(side=tk.LEFT, padx=5)
+
+        proc_frame = ttk.LabelFrame(self.root, text="Procesy")
+        proc_frame.pack(fill=tk.X, padx=10, pady=5)
+
+        self.process_list = tk.Listbox(proc_frame, height=5)
+        self.process_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        proc_scroll = ttk.Scrollbar(proc_frame, orient=tk.VERTICAL, command=self.process_list.yview)
+        proc_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self.process_list.config(yscrollcommand=proc_scroll.set)
+
+        thresh_frame = ttk.Frame(self.root)
+        thresh_frame.pack(pady=5)
+        ttk.Label(thresh_frame, text="Próg CPU (%)").pack(side=tk.LEFT)
+        ttk.Entry(thresh_frame, textvariable=self.cpu_threshold, width=5).pack(side=tk.LEFT, padx=5)
+        ttk.Label(thresh_frame, text="Próg RAM (%)").pack(side=tk.LEFT)
+        ttk.Entry(thresh_frame, textvariable=self.ram_threshold, width=5).pack(side=tk.LEFT, padx=5)
 
         # Układ wykresów
         metrics_count = (
@@ -197,6 +219,23 @@ class ResourceMonitorApp:
         net = self.network.get_usage()
         self.network_data["NET_UP"].append(net.upload_kbps)
         self.network_data["NET_DOWN"].append(net.download_kbps)
+
+        processes = self.process_monitor.get_usage()
+        self.process_list.delete(0, tk.END)
+        for proc in processes:
+            line = f"{proc.pid} {proc.name} CPU:{proc.percent:.1f}% RAM:{proc.memory:.1f}%"
+            self.process_list.insert(tk.END, line)
+            if (
+                proc.percent > self.cpu_threshold.get()
+                or proc.memory > self.ram_threshold.get()
+            ):
+                msg = (
+                    f"Proces {proc.name} (PID {proc.pid}) przekroczył dozwolony próg."
+                )
+                try:
+                    messagebox.showwarning("Próg przekroczony", msg)
+                except tk.TclError:
+                    print(msg)
 
         if len(self.x_data) > 60:
             self.x_data.pop(0)
