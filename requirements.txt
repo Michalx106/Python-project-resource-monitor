@@ -3,3 +3,5 @@ psutil
 GPUtil
 wmi; platform_system == "Windows"
 pytest
+pytest-cov
+genbadge[coverage]
