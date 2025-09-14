@@ -1,13 +1,13 @@
+from dataclasses import dataclass
+
 import psutil
+
 from .base_monitor import BaseMonitor, BaseUsage
 
 
+@dataclass
 class CPUUsage(BaseUsage):
-    """
-    Przechowuje informacje o aktualnym wykorzystaniu CPU.
-    """
-    def __init__(self, percent: float):
-        self.percent = percent
+    """Przechowuje informacje o aktualnym wykorzystaniu CPU."""
 
 
 class CPUMonitor(BaseMonitor):

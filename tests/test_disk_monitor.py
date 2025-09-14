@@ -26,12 +26,12 @@ def test_disk_monitor_collects_per_mount(monkeypatch):
     monkeypatch.setattr(dm.psutil, "disk_usage", fake_disk_usage)
 
     m = dm.DiskMonitor()
-    usages = m.get_usage()
-    mounts = {u.mount for u in usages}
-    assert mounts == {"/", "/data"}
-    percents = {u.mount: u.percent for u in usages}
-    assert percents["/"] == 11.0
-    assert percents["/data"] == 22.0
+    usages = sorted(m.get_usage(), key=lambda u: u.mount)
+    expected = [
+        dm.DiskUsage(percent=11.0, used=100, total=1000, mount="/"),
+        dm.DiskUsage(percent=22.0, used=200, total=2000, mount="/data"),
+    ]
+    assert usages == expected
 
 
 def test_get_mounts_filters_cdrom(monkeypatch):

@@ -1,5 +1,3 @@
-import types
-
 def test_cpu_monitor_reports_mocked_value(monkeypatch):
     from monitor import cpu_monitor as cm
 
@@ -8,5 +6,5 @@ def test_cpu_monitor_reports_mocked_value(monkeypatch):
 
     m = cm.CPUMonitor()
     usage = m.get_usage()
-    assert usage.percent == 42.0
+    assert usage == cm.CPUUsage(percent=42.0)
 

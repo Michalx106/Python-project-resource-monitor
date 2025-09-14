@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 
-class BaseUsage(ABC):
-    """
-    Abstrakcyjna klasa danych o użyciu zasobu.
-    """
+@dataclass
+class BaseUsage:
+    """Dane o użyciu zasobu."""
+
     percent: float
 
 

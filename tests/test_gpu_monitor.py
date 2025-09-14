@@ -33,7 +33,5 @@ def test_gpu_monitor_gputil_backend(monkeypatch):
 
     m = gm.GPUMonitor()
     usages = m.get_usage()
-    assert len(usages) == 1
-    assert usages[0].name == "FakeRTX"
-    assert usages[0].percent == 50.0
+    assert usages == [gm.GPUUsage(name="FakeRTX", percent=50.0)]
 

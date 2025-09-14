@@ -1,38 +1,17 @@
-import psutil
+from dataclasses import dataclass
 from time import time
+
+import psutil
+
 from .base_monitor import BaseMonitor, BaseUsage
 
 
+@dataclass
 class NetworkUsage(BaseUsage):
-    """
-    Przechowuje informacje o aktualnym użyciu sieci.
-    Args:
-        upload_kbps: Prędkość wysyłania danych w KB/s.
-        download_kbps: Prędkość pobierania danych w KB/s.
-    """
-    def __init__(self, upload_kbps: float, download_kbps: float):
-        """
-        Inicjalizuje obiekt NetworkUsage.
-        """
-        self.upload_kbps = upload_kbps
-        self.download_kbps = download_kbps
+    """Przechowuje informacje o aktualnym użyciu sieci."""
 
-    @property
-    def percent(self) -> float:
-        """
-        Zwraca procentowe wykorzystanie sieci.
-
-        Wylicza udział sumy prędkości wysyłania i pobierania w
-        maksymalnej przepustowości interfejsów sieciowych. Jeżeli
-        prędkość interfejsów jest niedostępna, zwracane jest 0.
-        """
-        stats = psutil.net_if_stats()
-        total_speed_mbps = sum(s.speed for s in stats.values() if s.speed > 0)
-        if total_speed_mbps <= 0:
-            return 0.0
-        max_kbps = total_speed_mbps * 128  # Mbps -> KB/s
-        current_kbps = self.upload_kbps + self.download_kbps
-        return (current_kbps / max_kbps) * 100
+    upload_kbps: float
+    download_kbps: float
 
 
 class NetworkMonitor(BaseMonitor):
@@ -57,7 +36,7 @@ class NetworkMonitor(BaseMonitor):
 
         elapsed = current_time - self.last_time
         if elapsed == 0:
-            return NetworkUsage(0.0, 0.0)
+            return NetworkUsage(percent=0.0, upload_kbps=0.0, download_kbps=0.0)
 
         upload_speed = (
             (current_sent - self.last_bytes_sent) / elapsed / 1024
@@ -70,4 +49,15 @@ class NetworkMonitor(BaseMonitor):
         self.last_bytes_recv = current_recv
         self.last_time = current_time
 
-        return NetworkUsage(upload_speed, download_speed)
+        stats = psutil.net_if_stats()
+        total_speed_mbps = sum(s.speed for s in stats.values() if s.speed > 0)
+        if total_speed_mbps <= 0:
+            percent = 0.0
+        else:
+            max_kbps = total_speed_mbps * 128  # Mbps -> KB/s
+            current_kbps = upload_speed + download_speed
+            percent = (current_kbps / max_kbps) * 100
+
+        return NetworkUsage(
+            percent=percent, upload_kbps=upload_speed, download_kbps=download_speed
+        )
