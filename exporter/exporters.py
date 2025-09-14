@@ -1,4 +1,5 @@
 import csv
+import json
 from typing import List, Dict
 
 
@@ -35,11 +36,14 @@ class CPUExporter(Exporter):
             y_data: Wartości metryki.
             label: Etykieta kolumny.
         """
-        with open(filename, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(["Czas (s)", label])
-            for x, y in zip(x_data, y_data):
-                writer.writerow([x, y])
+        try:
+            with open(filename, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(["Czas (s)", label])
+                for x, y in zip(x_data, y_data):
+                    writer.writerow([x, y])
+        except OSError as exc:
+            raise RuntimeError(f"Nie można zapisać pliku {filename}: {exc}") from exc
 
 
 class RAMExporter(Exporter):
@@ -50,11 +54,14 @@ class RAMExporter(Exporter):
         """
         Eksportuje dane RAM do pliku CSV.
         """
-        with open(filename, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(["Czas (s)", "RAM (%)"])
-            for x, y in zip(x_data, y_data):
-                writer.writerow([x, y])
+        try:
+            with open(filename, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(["Czas (s)", "RAM (%)"])
+                for x, y in zip(x_data, y_data):
+                    writer.writerow([x, y])
+        except OSError as exc:
+            raise RuntimeError(f"Nie można zapisać pliku {filename}: {exc}") from exc
 
 
 class DiskExporter(Exporter):
@@ -71,11 +78,14 @@ class DiskExporter(Exporter):
         """
         Eksportuje dane dysku do pliku CSV.
         """
-        with open(filename, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(["Czas (s)", f"Dysk {self.mount} (%)"])
-            for x, y in zip(x_data, y_data):
-                writer.writerow([x, y])
+        try:
+            with open(filename, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(["Czas (s)", f"Dysk {self.mount} (%)"])
+                for x, y in zip(x_data, y_data):
+                    writer.writerow([x, y])
+        except OSError as exc:
+            raise RuntimeError(f"Nie można zapisać pliku {filename}: {exc}") from exc
 
 
 class GPUExporter(Exporter):
@@ -92,11 +102,14 @@ class GPUExporter(Exporter):
         """
         Eksportuje dane GPU do pliku CSV.
         """
-        with open(filename, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(["Czas (s)", f"GPU {self.name} (%)"])
-            for x, y in zip(x_data, y_data):
-                writer.writerow([x, y])
+        try:
+            with open(filename, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(["Czas (s)", f"GPU {self.name} (%)"])
+                for x, y in zip(x_data, y_data):
+                    writer.writerow([x, y])
+        except OSError as exc:
+            raise RuntimeError(f"Nie można zapisać pliku {filename}: {exc}") from exc
 
 
 class NetworkExporter(Exporter):
@@ -113,11 +126,14 @@ class NetworkExporter(Exporter):
         """
         Eksportuje dane sieci do pliku CSV.
         """
-        with open(filename, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(["Czas (s)", f"{self.label} (KB/s)"])
-            for x, y in zip(x_data, y_data):
-                writer.writerow([x, y])
+        try:
+            with open(filename, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(["Czas (s)", f"{self.label} (KB/s)"])
+                for x, y in zip(x_data, y_data):
+                    writer.writerow([x, y])
+        except OSError as exc:
+            raise RuntimeError(f"Nie można zapisać pliku {filename}: {exc}") from exc
 
 
 class MultiMetricExporter(Exporter):
@@ -138,15 +154,35 @@ class MultiMetricExporter(Exporter):
             x_data: Oś czasu.
             metrics: Słownik metryk (nazwa: lista wartości).
         """
-        with open(filename, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            header = ["Czas (s)"] + list(metrics.keys())
-            writer.writerow(header)
+        try:
+            with open(filename, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                header = ["Czas (s)"] + list(metrics.keys())
+                writer.writerow(header)
 
-            for i in range(len(x_data)):
-                row = [x_data[i]] + [
-                    metrics[key][i] if i < len(metrics[key])
-                    else ''
-                    for key in metrics
-                ]
-                writer.writerow(row)
+                for i in range(len(x_data)):
+                    row = [x_data[i]] + [
+                        metrics[key][i] if i < len(metrics[key])
+                        else ''
+                        for key in metrics
+                    ]
+                    writer.writerow(row)
+        except OSError as exc:
+            raise RuntimeError(f"Nie można zapisać pliku {filename}: {exc}") from exc
+
+
+class JSONExporter(Exporter):
+    """Eksporter wielu metryk do pliku JSON."""
+
+    def export(
+        self,
+        filename: str,
+        x_data: List[int],
+        metrics: Dict[str, List[float]]
+    ) -> None:
+        """Zapisuje dane do pliku JSON."""
+        try:
+            with open(filename, mode='w', encoding='utf-8') as file:
+                json.dump({"x_data": x_data, "metrics": metrics}, file)
+        except OSError as exc:
+            raise RuntimeError(f"Nie można zapisać pliku {filename}: {exc}") from exc
