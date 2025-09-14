@@ -18,11 +18,21 @@ class NetworkUsage(BaseUsage):
         self.download_kbps = download_kbps
 
     @property
-    def percent(self):
+    def percent(self) -> float:
         """
         Zwraca procentowe wykorzystanie sieci.
+
+        Wylicza udział sumy prędkości wysyłania i pobierania w
+        maksymalnej przepustowości interfejsów sieciowych. Jeżeli
+        prędkość interfejsów jest niedostępna, zwracane jest 0.
         """
-        return 0
+        stats = psutil.net_if_stats()
+        total_speed_mbps = sum(s.speed for s in stats.values() if s.speed > 0)
+        if total_speed_mbps <= 0:
+            return 0.0
+        max_kbps = total_speed_mbps * 128  # Mbps -> KB/s
+        current_kbps = self.upload_kbps + self.download_kbps
+        return (current_kbps / max_kbps) * 100
 
 
 class NetworkMonitor(BaseMonitor):
