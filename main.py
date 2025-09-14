@@ -17,7 +17,7 @@ from monitor.utils import safe_call
 from exporter.exporters import (
     Exporter,
     CPUExporter, RAMExporter, DiskExporter, GPUExporter,
-    NetworkExporter, MultiMetricExporter
+    NetworkExporter, MultiMetricExporter, JSONExporter
 )
 
 
@@ -106,9 +106,18 @@ class ResourceMonitorApp:
         self.metric_menu.set("CPU")
         self.metric_menu.pack(side=tk.LEFT, padx=5)
 
+        self.export_format_var = tk.StringVar(value="CSV")
+        export_format_menu = ttk.Combobox(
+            frame,
+            textvariable=self.export_format_var,
+            values=["CSV", "JSON"],
+            width=6
+        )
+        export_format_menu.pack(side=tk.LEFT, padx=5)
+
         export_btn = ttk.Button(
             frame,
-            text="Eksportuj do CSV",
+            text="Eksportuj",
             command=self.export_selected
         )
         export_btn.pack(side=tk.LEFT, padx=5)
@@ -351,11 +360,42 @@ class ResourceMonitorApp:
 
     def export_selected(self):
         """
-        Eksportuje wybraną przez użytkownika metrykę do pliku CSV.
+        Eksportuje wybraną przez użytkownika metrykę do pliku CSV lub JSON.
         Obsługuje eksport pojedynczych oraz wszystkich metryk naraz.
         """
         key = self.selected_metric.get()
+        fmt = self.export_format_var.get()
         exporter: Exporter
+
+        if fmt == "JSON":
+            exporter = JSONExporter()
+            if key == "WSZYSTKO":
+                data = {
+                    "CPU": self.cpu_data,
+                    "RAM": self.ram_data,
+                    **{f"DISK_{k}": v for k, v in self.disk_data.items()},
+                    **{f"GPU_{k}": v for k, v in self.gpu_data.items()},
+                    **self.network_data,
+                }
+                exporter.export("all_metrics.json", self.x_data, data)
+                return
+            elif key == "CPU":
+                data = {"CPU": self.cpu_data}
+            elif key == "RAM":
+                data = {"RAM": self.ram_data}
+            elif key.startswith("DISK_"):
+                mount = key.split("_", 1)[1]
+                data = {f"DISK_{mount}": self.disk_data[mount]}
+            elif key.startswith("GPU_"):
+                name = key.split("_", 1)[1]
+                data = {f"GPU_{name}": self.gpu_data[name]}
+            elif key in ["NET_UP", "NET_DOWN"]:
+                data = {key: self.network_data[key]}
+            else:
+                return
+
+            exporter.export(f"{key.lower()}_data.json", self.x_data, data)
+            return
 
         if key == "CPU":
             exporter = CPUExporter()
@@ -381,7 +421,7 @@ class ResourceMonitorApp:
                 "RAM": self.ram_data,
                 **{f"DISK_{k}": v for k, v in self.disk_data.items()},
                 **{f"GPU_{k}": v for k, v in self.gpu_data.items()},
-                **self.network_data
+                **self.network_data,
             }
             exporter.export("all_metrics.csv", self.x_data, data)
             return
