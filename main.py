@@ -29,15 +29,26 @@ class ResourceMonitorApp:
     Wyświetla dane w postaci wykresów oraz umożliwia eksport wybranych
     metryk do pliku CSV.
     """
-    def __init__(self, root):
+    def __init__(
+        self,
+        root,
+        update_interval_ms: int = 1000,
+        history_length: int = 60,
+    ):
         """
         Inicjalizuje aplikację, monitory oraz bufory danych, buduje GUI.
+
         Args:
             root: Obiekt głównego okna tkinter.
+            update_interval_ms: Czas odświeżania wykresów w milisekundach.
+            history_length: Liczba ostatnich próbek przechowywanych w buforze.
         """
         self.root = root
         self.root.title("Monitor zasobów systemowych")
         self.root.geometry("1200x800")
+
+        self.update_interval_ms = update_interval_ms
+        self.history_length = history_length
 
         # Inicjalizacja monitorów
         self.cpu = CPUMonitor()
@@ -110,16 +121,36 @@ class ResourceMonitorApp:
         self.process_list = tk.Listbox(proc_frame, height=5)
         self.process_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        proc_scroll = ttk.Scrollbar(proc_frame, orient=tk.VERTICAL, command=self.process_list.yview)
+        proc_scroll = ttk.Scrollbar(
+            proc_frame, orient=tk.VERTICAL, command=self.process_list.yview
+        )
         proc_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.process_list.config(yscrollcommand=proc_scroll.set)
 
         thresh_frame = ttk.Frame(self.root)
         thresh_frame.pack(pady=5)
         ttk.Label(thresh_frame, text="Próg CPU (%)").pack(side=tk.LEFT)
-        ttk.Entry(thresh_frame, textvariable=self.cpu_threshold, width=5).pack(side=tk.LEFT, padx=5)
+        ttk.Entry(
+            thresh_frame, textvariable=self.cpu_threshold, width=5
+        ).pack(side=tk.LEFT, padx=5)
         ttk.Label(thresh_frame, text="Próg RAM (%)").pack(side=tk.LEFT)
-        ttk.Entry(thresh_frame, textvariable=self.ram_threshold, width=5).pack(side=tk.LEFT, padx=5)
+        ttk.Entry(
+            thresh_frame, textvariable=self.ram_threshold, width=5
+        ).pack(side=tk.LEFT, padx=5)
+
+        settings = ttk.Frame(self.root)
+        settings.pack(pady=5)
+
+        ttk.Label(settings, text="Interwał (ms)").pack(side=tk.LEFT, padx=5)
+        self.interval_var = tk.StringVar(value=str(self.update_interval_ms))
+        ttk.Entry(settings, textvariable=self.interval_var, width=7).pack(side=tk.LEFT)
+
+        ttk.Label(settings, text="Długość historii").pack(side=tk.LEFT, padx=5)
+        self.history_var = tk.StringVar(value=str(self.history_length))
+        ttk.Entry(settings, textvariable=self.history_var, width=7).pack(side=tk.LEFT)
+
+        apply_btn = ttk.Button(settings, text="Zastosuj", command=self.apply_settings)
+        apply_btn.pack(side=tk.LEFT, padx=5)
 
         # Układ wykresów
         metrics_count = (
@@ -172,8 +203,33 @@ class ResourceMonitorApp:
         self.ani = animation.FuncAnimation(
             self.fig,
             self.update_plot,
-            interval=1000
+            interval=self.update_interval_ms,
         )
+
+    def apply_settings(self):
+        """Aktualizuje parametry interwału odświeżania i długości historii."""
+        try:
+            self.update_interval_ms = int(self.interval_var.get())
+            self.history_length = int(self.history_var.get())
+        except ValueError:
+            return
+        if hasattr(self, "ani") and self.ani:
+            self.ani.event_source.interval = self.update_interval_ms
+        self.trim_buffers()
+
+    def trim_buffers(self):
+        """Przycina bufory danych do ustalonej długości historii."""
+        if len(self.x_data) > self.history_length:
+            excess = len(self.x_data) - self.history_length
+            del self.x_data[:excess]
+            del self.cpu_data[:excess]
+            del self.ram_data[:excess]
+            for key in self.disk_data:
+                del self.disk_data[key][:excess]
+            for key in self.gpu_data:
+                del self.gpu_data[key][:excess]
+            for key in self.network_data:
+                del self.network_data[key][:excess]
 
     def init_plot(self, label, color, data_buffer, idx):
         """
@@ -223,7 +279,9 @@ class ResourceMonitorApp:
         processes = self.process_monitor.get_usage()
         self.process_list.delete(0, tk.END)
         for proc in processes:
-            line = f"{proc.pid} {proc.name} CPU:{proc.percent:.1f}% RAM:{proc.memory:.1f}%"
+            line = (
+                f"{proc.pid} {proc.name} CPU:{proc.percent:.1f}% RAM:{proc.memory:.1f}%"
+            )
             self.process_list.insert(tk.END, line)
             if (
                 proc.percent > self.cpu_threshold.get()
@@ -237,16 +295,7 @@ class ResourceMonitorApp:
                 except tk.TclError:
                     print(msg)
 
-        if len(self.x_data) > 60:
-            self.x_data.pop(0)
-            self.cpu_data.pop(0)
-            self.ram_data.pop(0)
-            for key in self.disk_data:
-                self.disk_data[key].pop(0)
-            for key in self.gpu_data:
-                self.gpu_data[key].pop(0)
-            for key in self.network_data:
-                self.network_data[key].pop(0)
+        self.trim_buffers()
 
         self.frame_count += 1
         self.refresh_plot("CPU", self.cpu_data)
@@ -259,7 +308,10 @@ class ResourceMonitorApp:
             self.refresh_plot(k, self.network_data[k])
 
         for ax in self.ax:
-            ax.set_xlim(max(0, self.frame_count - 60), self.frame_count + 1)
+            ax.set_xlim(
+                max(0, self.frame_count - self.history_length),
+                self.frame_count + 1,
+            )
 
         self.canvas.draw()
 
