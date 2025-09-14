@@ -28,15 +28,26 @@ class ResourceMonitorApp:
     Wyświetla dane w postaci wykresów oraz umożliwia eksport wybranych
     metryk do pliku CSV.
     """
-    def __init__(self, root):
+    def __init__(
+        self,
+        root,
+        update_interval_ms: int = 1000,
+        history_length: int = 60,
+    ):
         """
         Inicjalizuje aplikację, monitory oraz bufory danych, buduje GUI.
+
         Args:
             root: Obiekt głównego okna tkinter.
+            update_interval_ms: Czas odświeżania wykresów w milisekundach.
+            history_length: Liczba ostatnich próbek przechowywanych w buforze.
         """
         self.root = root
         self.root.title("Monitor zasobów systemowych")
         self.root.geometry("1200x800")
+
+        self.update_interval_ms = update_interval_ms
+        self.history_length = history_length
 
         # Inicjalizacja monitorów
         self.cpu = CPUMonitor()
@@ -99,6 +110,20 @@ class ResourceMonitorApp:
         )
         export_btn.pack(side=tk.LEFT, padx=5)
 
+        settings = ttk.Frame(self.root)
+        settings.pack(pady=5)
+
+        ttk.Label(settings, text="Interwał (ms)").pack(side=tk.LEFT, padx=5)
+        self.interval_var = tk.StringVar(value=str(self.update_interval_ms))
+        ttk.Entry(settings, textvariable=self.interval_var, width=7).pack(side=tk.LEFT)
+
+        ttk.Label(settings, text="Długość historii").pack(side=tk.LEFT, padx=5)
+        self.history_var = tk.StringVar(value=str(self.history_length))
+        ttk.Entry(settings, textvariable=self.history_var, width=7).pack(side=tk.LEFT)
+
+        apply_btn = ttk.Button(settings, text="Zastosuj", command=self.apply_settings)
+        apply_btn.pack(side=tk.LEFT, padx=5)
+
         # Układ wykresów
         metrics_count = (
             2
@@ -150,8 +175,33 @@ class ResourceMonitorApp:
         self.ani = animation.FuncAnimation(
             self.fig,
             self.update_plot,
-            interval=1000
+            interval=self.update_interval_ms
         )
+
+    def apply_settings(self):
+        """Aktualizuje parametry interwału odświeżania i długości historii."""
+        try:
+            self.update_interval_ms = int(self.interval_var.get())
+            self.history_length = int(self.history_var.get())
+        except ValueError:
+            return
+        if hasattr(self, "ani") and self.ani:
+            self.ani.event_source.interval = self.update_interval_ms
+        self.trim_buffers()
+
+    def trim_buffers(self):
+        """Przycina bufory danych do ustalonej długości historii."""
+        if len(self.x_data) > self.history_length:
+            excess = len(self.x_data) - self.history_length
+            del self.x_data[:excess]
+            del self.cpu_data[:excess]
+            del self.ram_data[:excess]
+            for key in self.disk_data:
+                del self.disk_data[key][:excess]
+            for key in self.gpu_data:
+                del self.gpu_data[key][:excess]
+            for key in self.network_data:
+                del self.network_data[key][:excess]
 
     def init_plot(self, label, color, data_buffer, idx):
         """
@@ -198,16 +248,7 @@ class ResourceMonitorApp:
         self.network_data["NET_UP"].append(net.upload_kbps)
         self.network_data["NET_DOWN"].append(net.download_kbps)
 
-        if len(self.x_data) > 60:
-            self.x_data.pop(0)
-            self.cpu_data.pop(0)
-            self.ram_data.pop(0)
-            for key in self.disk_data:
-                self.disk_data[key].pop(0)
-            for key in self.gpu_data:
-                self.gpu_data[key].pop(0)
-            for key in self.network_data:
-                self.network_data[key].pop(0)
+        self.trim_buffers()
 
         self.frame_count += 1
         self.refresh_plot("CPU", self.cpu_data)
@@ -220,7 +261,10 @@ class ResourceMonitorApp:
             self.refresh_plot(k, self.network_data[k])
 
         for ax in self.ax:
-            ax.set_xlim(max(0, self.frame_count - 60), self.frame_count + 1)
+            ax.set_xlim(
+                max(0, self.frame_count - self.history_length),
+                self.frame_count + 1,
+            )
 
         self.canvas.draw()
 
