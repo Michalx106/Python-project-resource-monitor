@@ -16,7 +16,7 @@ def make_root():
     root.title = lambda *_: None
     root.geometry = lambda *_: None
     root.protocol = lambda *_: None
-    root.destroy = lambda: None
+    root.destroy = MagicMock()
     return root
 
 
@@ -88,12 +88,32 @@ def test_save_and_load_config(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(config, "CONFIG_FILE", tmp_path / "config.json")
 
-    app1 = main.ResourceMonitorApp(make_root())
+    safe_call_mock = MagicMock()
+
+    def decorator(func):
+        safe_call_mock.decorated_func = func
+
+        def wrapper(*args, **kwargs):
+            safe_call_mock.wrapper_called = True
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    safe_call_mock.return_value = decorator
+    monkeypatch.setattr(main, "safe_call", safe_call_mock)
+
+    root1 = make_root()
+    app1 = main.ResourceMonitorApp(root1)
     app1.update_interval_ms = 1500
     app1.history_length = 20
     app1.cpu_threshold_var.set("75")
     app1.ram_threshold_var.set("65")
     app1.on_close()
+
+    safe_call_mock.assert_called_once_with()
+    assert safe_call_mock.decorated_func is root1.destroy
+    assert safe_call_mock.wrapper_called
+    assert root1.destroy.called
 
     app2 = main.ResourceMonitorApp(make_root())
     assert app2.update_interval_ms == 1500
