@@ -229,10 +229,14 @@ class ResourceMonitorApp:
     def apply_settings(self):
         """Aktualizuje parametry interwału odświeżania i długości historii."""
         try:
-            self.update_interval_ms = int(self.interval_var.get())
-            self.history_length = int(self.history_var.get())
+            new_interval = int(self.interval_var.get())
+            new_history = int(self.history_var.get())
         except ValueError:
             return
+        if new_interval <= 0 or new_history <= 0:
+            return
+        self.update_interval_ms = new_interval
+        self.history_length = new_history
         if hasattr(self, "ani") and self.ani:
             self.ani.event_source.interval = self.update_interval_ms
         self.trim_buffers()
